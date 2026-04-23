@@ -12,6 +12,7 @@ set(SOURCES
     src/search_server.cpp
     src/string_processing.cpp
     src/txtfile_scanner.cpp
+    src/file_reader.cpp
 )
 
 add_executable(file_search ${SOURCES})
