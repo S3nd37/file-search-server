@@ -12,8 +12,7 @@ std::string ReadTxtFileContent(const std::filesystem::path& path) {
     if (!in) {
         return result;
     }
-    //требуется запись многострочного файла в строку, хотя вроде и так норм будет
-    //ВЕРНУТЬСЯ, ПОДУМАТЬ
+    
     while (std::getline(in, line)) {
         result += line + " ";
     }
