@@ -21,11 +21,21 @@ public:
         if (!all_of(stop_words_.begin(), stop_words_.end(), IsValidWord)) {
             throw std::invalid_argument("Some of stop words are invalid");
         }
+        bool first = true;
+        for (const auto& word : stop_words) {
+            if (first) {
+                stop_words_string_ += word;
+                first = false;
+            } else {
+                std::string line = " " + word;
+                stop_words_string_ += line;
+            }
+        }
     }
 
     explicit SearchServer(const std::string& stop_words_text);
 
-    void AddDocument(int document_id, const std::string& document);
+    void AddDocument(int document_id, const std::string& document, const std::string& path);
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const {
         const auto query = ParseQuery(raw_query);
@@ -46,11 +56,20 @@ public:
     int GetDocumentCount() const;
 
     int GetDocumentId(int index) const;
+
+    std::string GetDocumentPath(int id) const;
+
+    bool SaveIndex(const  std::string& index_file) const;
+
+    bool LoadIndex(const  std::string& index_file);
+
 private:
-    const std::set<std::string> stop_words_;
+    std::set<std::string> stop_words_;
+    std::string stop_words_string_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::set<int> document_ids_;
     std::vector<int> document_ids_vector_;
+    std::map<int, std::string> document_paths_;
 
     bool IsStopWord(const std::string& word) const;
 
@@ -99,7 +118,7 @@ private:
         std::vector<Document> matched_documents;
         for (const auto &[document_id, relevance] : document_to_relevance) {
             matched_documents.push_back(
-                {document_id, relevance});
+                {document_id, relevance, document_paths_.at(document_id)});
         }
         return matched_documents;
     }
