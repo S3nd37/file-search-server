@@ -83,20 +83,28 @@ enum class Command {
     Unknown
 };
 
+string ToLower(const string& str) {
+    string lowered;
+    for (const char& ch : str) {
+        lowered += tolower(ch);
+    }
+    return lowered;
+}
 Command IdentifyCommand(const string& com) {
-    if (com == "exit") {return Command::Exit;}
-    if (com == "index") {return Command::Index;}
-    if (com == "search") {return Command::Search;}
-    if (com == "help") {return Command::Help;}
-    if (com == "test") {return Command::Test;}
+    string unicom = ToLower(com);
+    if (unicom == "exit") {return Command::Exit;}
+    if (unicom == "index") {return Command::Index;}
+    if (unicom == "search") {return Command::Search;}
+    if (unicom == "help") {return Command::Help;}
+    if (unicom == "test") {return Command::Test;}
     return Command::Unknown;
 }
 
 void WriteHelpBlock() {
     cout << "There are commands to use program:" << endl;
-    cout << "exit - type to close program" << endl;
+    cout << "exit - close program" << endl;
     cout << "help - view commands" << endl;
-    cout << "index - reindex or index .txt files from testing directory" << endl;
+    cout << "index <path> - index .txt files from directory <path>, leave empty to index testing directory" << endl;
     cout << "search <query> - search, type your query instead of <query>" << endl;
     cout << "This is working prototype, program will be upgraded," << endl;
     cout << "Thank you for trying my project." << endl;
@@ -109,7 +117,7 @@ SearchServer DoIndex(const filesystem::path& path) {
         server.AddDocument(++id, ReadTxtFileContent(file), file.string());
         cout << "File " << file.string() << "got id - " << id << endl;
     }
-    server.SaveIndex("C:/Users/WRKR/Desktop/index.txt");
+    server.SaveIndex("index.txt");
     return server;
 }
 
@@ -132,17 +140,17 @@ void TestingBlock(const SearchServer& server) {
 }
 
 int main() {
-    cout << "--== File Search Server has started ==--" << endl << "Type \"help\" to view usage" << endl;
+    cout << "----===== File Search Server has started =====----" << endl << "Type \"help\" to view usage." << endl;
     SearchServer searchserver = [&]() {
-        if (filesystem::exists("C:/Users/WRKR/Desktop/index.txt")) {
+        if (filesystem::exists("index.txt")) {
             cout << "Index file found and loaded!" << endl;
-            return CreateSearchServerFromIndex("C:/Users/WRKR/Desktop/index.txt");
+            return CreateSearchServerFromIndex("index.txt");
         } else {
             cout << "Index file not found, initializing new search server" << endl;
             return SearchServer("the a an in on at to and or but"s);
         }
     }();
-
+    
     filesystem::path dir = "test_directory"s;
     if (!filesystem::exists(dir)) {
         cout << "Testing directory missing, let me create it" << endl;
@@ -157,14 +165,35 @@ int main() {
                     return 0;
                 }
                 case Command::Index: {
-                    searchserver = DoIndex(dir);
+                    string directory = dir.string();
+                    string input_path;
+                    getline(cin, input_path);
+                    if ((!input_path.empty())) {
+                        const auto first_smbl = find_if(input_path.begin(), input_path.end(), [](const auto& el) {
+                                                                                                if (el != ' ') {
+                                                                                                    return true;
+                                                                                                }
+                                                                                                return false;
+                                                                                            });
+                        if (first_smbl != input_path.end()) {
+                            int pos = distance(input_path.begin(), first_smbl);
+                            directory = input_path.substr(pos);
+                            cout << "You chose to index directory " << directory << "." << endl;
+                        }
+                    }
+                    searchserver = DoIndex(directory);
                     break;
                 }
                 case Command::Search: {
                     cin.ignore();
                     string query;
                     getline(cin, query);
-                    cout << searchserver.FindTopDocuments(query);
+                    const vector<Document> Found = searchserver.FindTopDocuments(query);
+                    if (Found.empty()) {
+                        cout << "Nothing found with query \"" << query << "\"." << endl;
+                    } else {
+                        cout << Found;
+                    }
                     break;
                 }
                 case Command::Help: {
@@ -176,6 +205,9 @@ int main() {
                     break;
                 }
         default:
+            string trash;
+            getline(cin, trash);
+            cout << "Unknown command, see \"help\"" << endl;
             break;
         }
     }
