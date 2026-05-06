@@ -4,7 +4,6 @@
 #include <vector>
 #include <fstream>
 
-#include "read_input_functions.h"
 #include "string_processing.h"
 #include "document.h"
 #include "search_server.h"
@@ -35,29 +34,28 @@ void CreateTestDocuments(const filesystem::path& directory) {
         if(!filesystem::exists(directory)) {
             filesystem::create_directory(directory);
         }
-        std::ofstream file1(directory / "cat.txt");
+        std::ofstream file1(directory / "Register.txt");
         if (file1) {
-            file1  << "cat meets dog at the park in the morning"s;
+            file1  << "ReGiStEr iS nOt ThE pRoBlEm"s;
         }
         file1.close();
 
-        std::ofstream file2(directory / "dog.txt");
+        std::ofstream file2(directory / "Pushkin.txt");
         if (file2) {
-            file2  << "dog wants to meet cat but want to sleep"s;
+            file2  << "A captive, alone in a dungeon I dwell, \n"
+                      "Entombed in the stillness and murk of a cell. \n"
+                      "Outside, in the courtyard, in wild, frenzied play, \n"
+                      "My comrade, an eagle, has pounced on his prey. \n\n"
+                      "Then, leaving the blood-spattered morsel, his eye, \n"
+                      "He fixes on me with a dolorous cry, \n"
+                      "A cry that is more like a call or a plea- \n"
+                      "\"\'Tis time,\" he is saying, \"\'tis time, let us flee! \n"
+                      "\"We\'re both wed to freedom, so let us away \n\n"
+                      "To where lonely storm-clouds courageously stray, \n"
+                      "Where turbulent seas rush to merge with the sky, \n"
+                      "Where only the winds dare to venture and I!...\""s;
         }
         file2.close();
-
-        std::ofstream file3(directory / "programmer.txt");
-        if (file3) {
-            file3  << "i want to code using C++ so i try my best and seems like i can do it"s;
-        }
-        file3.close();
-
-        std::ofstream file4(directory / "parrot.txt");
-        if (file4) {
-            file4  << "sweet parrot came to the park and watched at the sad lonely cat"s;
-        }
-        file4.close();
 
     } catch (const filesystem::filesystem_error& err) {
         cerr << "Cought error: " << err.what() << endl;
@@ -83,13 +81,6 @@ enum class Command {
     Unknown
 };
 
-string ToLower(const string& str) {
-    string lowered;
-    for (const char& ch : str) {
-        lowered += tolower(ch);
-    }
-    return lowered;
-}
 Command IdentifyCommand(const string& com) {
     string unicom = ToLower(com);
     if (unicom == "exit") {return Command::Exit;}
@@ -115,28 +106,54 @@ SearchServer DoIndex(const filesystem::path& path) {
     int id = 0;
     for (const auto& file : TxtFinder(path)) {
         server.AddDocument(++id, ReadTxtFileContent(file), file.string());
-        cout << "File " << file.string() << "got id - " << id << endl;
+        cout << "File " << file.string() << " got id - " << id << endl;
     }
     server.SaveIndex("index.txt");
     return server;
 }
 
 void TestingBlock(const SearchServer& server) {
-    const auto Found1 = server.FindTopDocuments("cat dog");
-    cout << "With query \"cat dog\" found " << Found1.size() << " docs, which is:" << endl;
-    cout << Found1;
+    {
+        const auto Found = server.FindTopDocuments("ReGiStEr");
+        cout << "With query \"ReGiStEr\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
 
-    const auto Found2 = server.FindTopDocuments("C++ code");
-    cout << "With query \"C++ code\" found " << Found2.size() << " docs, which is:" << endl;
-    cout << Found2;
+    {
+        const auto Found = server.FindTopDocuments("DUNGEON");
+        cout << "With query \"DUNGEON\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
 
-    const auto Found3 = server.FindTopDocuments("parrot");
-    cout << "With query \"parrot\" found " << Found3.size() << " docs, which is:" << endl;
-    cout << Found3;
+    {
+        const auto Found = server.FindTopDocuments("The problem is register. Not the captive -alone");
+        cout << "With query \"The problem is register. Not the captive -alone\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
 
-    const auto Found4 = server.FindTopDocuments("not empty query");
-    cout << "With query \"not empty query\" found " << Found4.size() << " docs, which is:" << endl;
-    cout << Found4;
+    {
+        const auto Found = server.FindTopDocuments("not empty query");
+        cout << "With query \"not empty query\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("-");
+        cout << "With query \"-\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("");
+        cout << "With query \"\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("register -register");
+        cout << "With query \"register -register\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
 }
 
 int main() {
@@ -185,7 +202,6 @@ int main() {
                     break;
                 }
                 case Command::Search: {
-                    cin.ignore();
                     string query;
                     getline(cin, query);
                     const vector<Document> Found = searchserver.FindTopDocuments(query);

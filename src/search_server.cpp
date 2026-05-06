@@ -8,13 +8,13 @@
 
 
 #include "search_server.h"
+#include "string_processing.h"
 
 using namespace std;
 
 
 SearchServer::SearchServer(const string& stop_words_text)
-        : SearchServer(
-            SplitIntoWords(stop_words_text))
+        : SearchServer(SplitIntoWords(stop_words_text))
     {
         stop_words_string_ = stop_words_text;
     }

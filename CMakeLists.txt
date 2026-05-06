@@ -8,7 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SOURCES
     src/document.cpp
     src/main.cpp
-    src/read_input_functions.cpp
     src/search_server.cpp
     src/string_processing.cpp
     src/txtfile_scanner.cpp

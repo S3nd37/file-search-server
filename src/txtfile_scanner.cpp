@@ -5,11 +5,7 @@
 
 std::vector<std::filesystem::path> TxtFinder(const std::filesystem::path& dir) {
     std::vector<std::filesystem::path> result;
-    if (!std::filesystem::exists(dir)) {
-        return result;
-    }
-
-    if (!std::filesystem::is_directory(dir)) {
+    if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir))  {
         return result;
     }
     
