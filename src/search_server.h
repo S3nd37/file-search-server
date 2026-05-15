@@ -35,6 +35,10 @@ public:
 
     explicit SearchServer(const std::string& stop_words_text);
 
+    void SetStopWords(const std::string& text);
+
+    std::string GetStopWords();
+
     void AddDocument(int document_id, const std::string& document, const std::string& path);
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const {

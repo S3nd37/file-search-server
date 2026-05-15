@@ -19,6 +19,15 @@ SearchServer::SearchServer(const string& stop_words_text)
         stop_words_string_ = stop_words_text;
     }
 
+void SearchServer::SetStopWords(const string& text) {
+    stop_words_string_ = text;
+    stop_words_ = MakeUniqueNonEmptyStrings(SplitIntoWords(text));
+}
+
+string SearchServer::GetStopWords() {
+    return stop_words_string_;
+}
+
 void SearchServer::AddDocument(int document_id, const string& document, const string& path) {
     if ((document_id < 0) || (document_ids_.count(document_id) > 0)) {
         throw invalid_argument("Invalid document_id"s);
@@ -77,7 +86,7 @@ bool SearchServer::LoadIndex(const string& index_file) {
         return false;
     }
     string line;
-    getline(in, line); //здесь пока заглушка для пропуска сохраненных в файле стоп-слов. 
+    getline(in, line); //здесь костыль для пропуска сохраненных в файле стоп-слов. 
     int size = 0;
     in >> size;
     in.ignore(); //пропуск остатка строки
