@@ -19,11 +19,3 @@ add_executable(file_search ${SOURCES})
 target_include_directories(file_search PRIVATE src)
 
 target_link_options(file_search PRIVATE -static)
-
-if (MINGW)
-    target_link_libraries(file_search PRIVATE stdc++fs)
-endif()
-
-if (UNIX AND NOT APPLE)
-    target_link_libraries(file_search PRIVATE stdc++fs)
-endif()

@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <chrono>
+#include <cstdlib>
 
 #include "string_processing.h"
 #include "document.h"
@@ -12,7 +14,9 @@
 
 using namespace std;
 using std::cout;
+using std::getline;
 
+//удобные операторы вывода документа и вектора документов
 ostream& operator<<(ostream& os, const Document& doc) {
     os << "{ "s
          << "document_id = "s << doc.id << ", "s
@@ -26,6 +30,116 @@ ostream& operator<<(ostream& os, const vector<Document>& docs) {
         os << doc;
     }
     return os;
+}
+
+
+//восстановление файла из текстового "слепка" в index.txt
+SearchServer CreateSearchServerFromIndex(const string& path) {
+    ifstream in(path);
+    string stop_words_str;
+    getline(in, stop_words_str);
+    SearchServer server(stop_words_str);
+    server.LoadIndex(path);
+    return server;
+}
+
+//доступные команды
+enum class Command {
+    Exit,
+    Index,
+    Search,
+    Help,
+    Test,
+    SetStopWords,
+    Unknown
+};
+//функция для идентификации команды
+Command IdentifyCommand(const string& com) {
+    string unicom = ToLower(com);
+    if (unicom == "exit") {return Command::Exit;}
+    if (unicom == "index") {return Command::Index;}
+    if (unicom == "search") {return Command::Search;}
+    if (unicom == "help") {return Command::Help;}
+    if (unicom == "test") {return Command::Test;}
+    if (unicom == "setstopwords") {return Command::SetStopWords;}
+    return Command::Unknown;
+}
+//вывод при команде help
+void WriteHelpBlock() {
+    cout << "There are commands to use program:" << endl << endl;
+    cout << "exit           -   close program" << endl << endl;
+    cout << "help           -   view commands" << endl << endl;
+    cout << "index <path>   -   index .txt files from directory <path>, leave empty to index all (only for Windows)" << endl << endl;
+    cout << "search <query> -   type your query instead of <query> to search" << endl << endl;
+    cout << "setstopwords   -   to set your stop-words, do not type your words until asked" << endl;
+}
+//создание индекса в оперативной памяти и выгрузка "слепка" в index.txt
+SearchServer DoIndex(const filesystem::path& path, SearchServer& server) {
+    int id = 0;
+    SearchServer new_server(server.GetStopWords());
+    new_server.SetIndexedDir(server.GetIndexedDir());
+    for (const auto& file : TxtFinder(path)) {
+        new_server.AddDocument(++id, ReadTxtFileContent(file), file.string());
+        //cout << "File " << file.string() << " got id - " << id << endl;
+    }
+    new_server.SaveIndex("index.txt");
+    cout << "Indexed." << endl;
+    return new_server;
+}
+//делает то же самое, но для группы входных папок
+SearchServer DoIndex(const vector<filesystem::path>& roots, SearchServer& server) {
+    int id = 0;
+    SearchServer new_server(server.GetStopWords());
+    new_server.SetIndexedDir(server.GetIndexedDir());
+    for (const auto& root : roots) {
+        for (const auto& file : TxtFinder(root)) {
+            new_server.AddDocument(++id, ReadTxtFileContent(file), file.string());
+            //cout << "File " << file.string() << " got id - " << id << endl;
+        }
+    }
+
+    new_server.SaveIndex("index.txt");
+    cout << "Indexed." << endl;
+    return new_server;
+}
+
+//блок тестирования, скрытая команда test
+void TestingBlock(const SearchServer& server) {
+    {
+        const auto Found = server.FindTopDocuments("ReGiStEr");
+        cout << "With query \"ReGiStEr\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("DUNGEON");
+        cout << "With query \"DUNGEON\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("The problem is register. Not the captive -alone");
+        cout << "With query \"The problem is register. Not the captive -alone\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("-");
+        cout << "With query \"-\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("");
+        cout << "With query \"\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
+
+    {
+        const auto Found = server.FindTopDocuments("register -register");
+        cout << "With query \"register -register\" found " << Found.size() << " docs, which is:" << endl;
+        cout << Found;
+    }
 }
 
 //создание тестовой папки с документами
@@ -63,109 +177,26 @@ void CreateTestDocuments(const filesystem::path& directory) {
 
 }
 
-SearchServer CreateSearchServerFromIndex(const string& path) {
-    ifstream in(path);
-    string stop_words_str;
-    getline(in, stop_words_str);
-    SearchServer server(stop_words_str);
-    server.LoadIndex(path);
-    return server;
-}
-
-enum class Command {
-    Exit,
-    Index,
-    Search,
-    Help,
-    Test,
-    SetStopWords,
-    Unknown
-};
-
-Command IdentifyCommand(const string& com) {
-    string unicom = ToLower(com);
-    if (unicom == "exit") {return Command::Exit;}
-    if (unicom == "index") {return Command::Index;}
-    if (unicom == "search") {return Command::Search;}
-    if (unicom == "help") {return Command::Help;}
-    if (unicom == "test") {return Command::Test;}
-    if (unicom == "setstopwords") {return Command::SetStopWords;}
-    return Command::Unknown;
-}
-
-void WriteHelpBlock() {
-    cout << "There are commands to use program:" << endl;
-    cout << "exit - close program" << endl;
-    cout << "help - view commands" << endl;
-    cout << "index <path> - index .txt files from directory <path>, leave empty to index testing directory" << endl;
-    cout << "search <query> - search, type your query instead of <query>" << endl;
-    cout << "setstopwords - to set your own stop-words" << endl;
-}
-
-SearchServer DoIndex(const filesystem::path& path, SearchServer& server) {
-    int id = 0;
-    SearchServer new_server(server.GetStopWords());
-    for (const auto& file : TxtFinder(path)) {
-        new_server.AddDocument(++id, ReadTxtFileContent(file), file.string());
-        cout << "File " << file.string() << " got id - " << id << endl;
-    }
-    new_server.SaveIndex("index.txt");
-    return new_server;
-}
-
-void TestingBlock(const SearchServer& server) {
-    {
-        const auto Found = server.FindTopDocuments("ReGiStEr");
-        cout << "With query \"ReGiStEr\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("DUNGEON");
-        cout << "With query \"DUNGEON\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("The problem is register. Not the captive -alone");
-        cout << "With query \"The problem is register. Not the captive -alone\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("not empty query");
-        cout << "With query \"not empty query\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("-");
-        cout << "With query \"-\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("");
-        cout << "With query \"\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
-    }
-
-    {
-        const auto Found = server.FindTopDocuments("register -register");
-        cout << "With query \"register -register\" found " << Found.size() << " docs, which is:" << endl;
-        cout << Found;
+void IndexCom(const string& input_path, SearchServer& searchserver) {
+    string directory = TrimPath(input_path);
+    if ((!directory.empty())) {
+        cout << "You chose to index " << directory << "." << endl;
+            if (filesystem::exists(directory) && filesystem::is_directory(directory)) {
+                searchserver.SetIndexedDir(directory);
+                searchserver = DoIndex(directory, searchserver);
+            } else {
+                cout << "Can't find this directory." << endl;
+            }                   
+    } else {
+        searchserver.SetIndexedDir("all");
+        searchserver = DoIndex(FindEntries(), searchserver);
     }
 }
 
 int main() {
     cout << "----===== File Search Server has started =====----" << endl << "Type \"help\" to view usage." << endl;
-
-    filesystem::path dir = "test_directory"s;
-    if (!filesystem::exists(dir)) {
-        cout << "Testing directory missing, let me create it" << endl;
-        CreateTestDocuments(dir);
-    }
-
+    //дабы всегда было что индексировать - при запуске и отсутствии тестовой директории будет создана новая.
+    //инициализация класса поискового ядра + настройка стоп-слов по желанию пользователя
     SearchServer searchserver = [&]() {
         if (filesystem::exists("index.txt")) {
             cout << "Index file found and loaded!" << endl;
@@ -185,50 +216,32 @@ int main() {
             if (ToLower(respond) == "y") {
                 cout << "Please enter your stop-words divided by spaces" << endl;
                 getline(cin, stp_wrds);
+
             } else if (ToLower(respond) == "n") {
-                cout << "Stop-words will set by default" << endl;
+                cout << "Stop-words will be set by default" << endl;
             }
             SearchServer server(stp_wrds);
+            cout << "Stop-words set" << endl;
             return server;
         }
     }();
-
+    //код интерфейса. здесь происходит реакция на соответствующие команды
     string command;
     while (cin >> command) {
         Command cmd = IdentifyCommand(command);
         switch (cmd) {
                 case Command::Exit: {
-                    searchserver.SaveIndex("index.txt");
                     return 0;
                 }
                 case Command::Index: {
-                    string directory = dir.string();
                     string input_path;
                     getline(cin, input_path);
-                    if ((!input_path.empty())) {
-                        const auto first_smbl = find_if(input_path.begin(), input_path.end(), [](const auto& el) {
-                                                                                                if (el != ' ') {
-                                                                                                    return true;
-                                                                                                }
-                                                                                                return false;
-                                                                                            });
-                        if (first_smbl != input_path.end()) {
-                            int pos = distance(input_path.begin(), first_smbl);
-                            directory = input_path.substr(pos);
-                            cout << "You chose to index directory " << directory << "." << endl;
-                        }
-                    }
-
-                    searchserver = DoIndex(directory, searchserver);
+                    IndexCom(input_path, searchserver);   
                     break;
                 }
                 case Command::Search: {
                     string query;
                     getline(cin, query);
-                    cout << "Query is"<< endl;
-                    for (const auto& wrd : SplitIntoWords(query)) {
-                        cout << wrd << endl;
-                    }
                     const vector<Document> Found = searchserver.FindTopDocuments(query);
                     if (Found.empty()) {
                         cout << "Nothing found with query \"" << query << "\"." << endl;
@@ -238,8 +251,10 @@ int main() {
                     break;
                 }
                 case Command::Help: {
+                    {
                     WriteHelpBlock();
                     break;
+                    }
                 }
                 case Command::Test: {
                     TestingBlock(searchserver);
@@ -247,12 +262,19 @@ int main() {
                 }
                 case Command::SetStopWords: {
                     string stp_wrds = "the a an in on at to and or but"s;
-                    cout << "You wish to set your stop-words. Enter new stop-words divided by spaces"s << endl;
+                    cout << "You wish to set your stop-words. Enter new stop-words divided by spaces:"s << endl;
                     string trash;
                     getline(cin, trash);
                     getline(cin, stp_wrds);
                     searchserver.SetStopWords(stp_wrds);
-                    searchserver = DoIndex(dir, searchserver);
+                    string dir = searchserver.GetIndexedDir();
+                    if (dir.empty()) {
+                        cout << "Stop words set, now indexing can be made" << endl;
+                    } else if (dir != "all") {
+                        searchserver = DoIndex(dir, searchserver);
+                    } else {
+                        IndexCom("", searchserver);
+                    }
                     break;
                 }
         default:

@@ -3,7 +3,7 @@
 #include <fstream>
 
 #include "file_reader.h"
-
+//здесь содержится реализация функции чтения текстовых файлов. В дальнейшем - планируется добавить больше форматов для обработки.
 std::string ReadTxtFileContent(const std::filesystem::path& path) {
     std::string result;
     std::string line;

@@ -67,6 +67,10 @@ public:
 
     bool LoadIndex(const  std::string& index_file);
 
+    void SetIndexedDir(const std::string& dir);
+
+    std::string GetIndexedDir() const;
+
 private:
     std::set<std::string> stop_words_;
     std::string stop_words_string_;
@@ -74,6 +78,7 @@ private:
     std::set<int> document_ids_;
     std::vector<int> document_ids_vector_;
     std::map<int, std::string> document_paths_;
+    std::string indexed_dir_;
 
     bool IsStopWord(const std::string& word) const;
 
